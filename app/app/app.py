@@ -1,3 +1,12 @@
+import sys
+import os
+
+# Qovluq yollarını sistemə əlavə edirik ki, fayllar bir-birini tapsın
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+sys.path.append(os.path.abspath(os.path.join(current_dir, '..')))
+
+from database import DatabaseManager
 import streamlit as st
 import pandas as pd
 from datetime import datetime
