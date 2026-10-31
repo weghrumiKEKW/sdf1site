@@ -1,76 +1,66 @@
-import pyodbc
-from config import DB_DRIVER, DB_NAME, DB_SERVER
+import sqlite3
+from models import Category, Event, User, Registration
 
+class DatabaseManager:
+    def __init__(self, db_name="university_events.db"):
+        self.db_name = db_name
+        self.create_tables()
 
-def create_connection():
-    try:
-        conn = pyodbc.connect(
-            f"DRIVER={{{DB_DRIVER}}};"
-            f"SERVER={DB_SERVER};"
-            f"DATABASE={DB_NAME};"
-            f"Trusted_Connection=yes;"
-        )
-        return conn
-    except Exception as err:
-        print(f"Database əlaqə xətası: {err}")
-        return None
+    def get_connection(self):
+        return sqlite3.connect(self.db_name)
 
-
-def add_student(name: str, score: float) -> bool:
-    conn = create_connection()
-    if not conn:
-        return False
-
-    query = "INSERT INTO Students (Name, Score) VALUES (?, ?)"
-    try:
+    def create_tables(self):
+        conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute(query, (name, score))
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL
+            )
+        ''')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT,
+                category_id INTEGER,
+                date TEXT NOT NULL,
+                time TEXT NOT NULL,
+                location TEXT NOT NULL,
+                max_participants INTEGER NOT NULL,
+                FOREIGN KEY (category_id) REFERENCES categories (id)
+            )
+        ''')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                full_name TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL
+            )
+        ''')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS registrations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                event_id INTEGER,
+                registration_date TEXT,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,
+                UNIQUE(user_id, event_id)
+            )
+        ''')
+        
         conn.commit()
-        return True
-    except Exception as err:
-        print(f"Tələbə əlavə edilərkən xəta: {err}")
-        return False
-    finally:
+        
+        # İlkin kateqoriyalar
+        cursor.execute("SELECT COUNT(*) FROM categories")
+        if cursor.fetchone()[0] == 0:
+            default_categories = [("Elmi Konfrans",), ("Seminar",), ("Təlim",), ("Müsabiqə",)]
+            cursor.executemany("INSERT INTO categories (name) VALUES (?)", default_categories)
+            conn.commit()
+            
         conn.close()
-
-
-def get_students() -> list:
-    conn = create_connection()
-    if not conn:
-        return []
-
-    query = "SELECT Id, Name, Score FROM Students ORDER BY Id DESC"
-    students = []
-    try:
-        cursor = conn.cursor()
-        cursor.execute(query)
-        rows = cursor.fetchall()
-        for row in rows:
-            students.append({"id": row.Id, "name": row.Name, "score": float(row.Score)})
-    except Exception as err:
-        print(f"Məlumatlar çəkilərkən xəta: {err}")
-    finally:
-        conn.close()
-
-    return students
-
-
-def get_student(search_query: str) -> list:
-    conn = create_connection()
-    if not conn:
-        return []
-
-    query = "SELECT Id, Name, Score FROM Students WHERE Name LIKE ? ORDER BY Id DESC"
-    students = []
-    try:
-        cursor = conn.cursor()
-        cursor.execute(query, (f"%{search_query}%",))
-        rows = cursor.fetchall()
-        for row in rows:
-            students.append({"id": row.Id, "name": row.Name, "score": float(row.Score)})
-    except Exception as err:
-        print(f"Axtarış xətası: {err}")
-    finally:
-        conn.close()
-
-    return students
