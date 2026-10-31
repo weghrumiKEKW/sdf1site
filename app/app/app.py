@@ -1,16 +1,24 @@
 import sys
 import os
 
-# Qovluq yollarını sistemə əlavə edirik ki, fayllar bir-birini tapsın
+# Qovluq yollarını dinamik olaraq tapıb sistemə əlavə edirik (ImportError xətasını önləmək üçün)
 current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
 sys.path.append(current_dir)
-sys.path.append(os.path.abspath(os.path.join(current_dir, '..')))
+sys.path.append(parent_dir)
 
-from database import DatabaseManager
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from database import DatabaseManager
+
+# database modulu fərqli qovluqlarda olsa belə tapılması üçün try-except
+try:
+    from database import DatabaseManager
+except ImportError:
+    try:
+        from app.database import DatabaseManager
+    except ImportError:
+        from .database import DatabaseManager
 
 db = DatabaseManager()
 
@@ -27,6 +35,7 @@ menu = [
 ]
 choice = st.sidebar.selectbox("Naviqasiya", menu)
 
+# --- 1. TƏDBİRLƏR SİYAHISI VƏ AXTARIŞ ---
 if choice == "📅 Tədbirlər Siyahısı & Axtarış":
     st.header("📅 Mövcud Tədbirlər və Axtarış")
     conn = db.get_connection()
@@ -78,6 +87,7 @@ if choice == "📅 Tədbirlər Siyahısı & Axtarış":
     else:
         st.info("Hələ ki sistemdə tədbir yoxdur.")
 
+# --- 2. YENİ TƏDBİR YARAT ---
 elif choice == "➕ Yeni Tədbir Yarat":
     st.header("➕ Yeni Tədbir Əlavə Et")
     conn = db.get_connection()
@@ -113,6 +123,7 @@ elif choice == "➕ Yeni Tədbir Yarat":
                 finally:
                     conn.close()
 
+# --- 3. İŞTİRAKÇI QEYDİYYATI ---
 elif choice == "📝 Tədbirə Qeydiyyat":
     st.header("📝 Tədbirə Qeydiyyatdan Keçmə")
     conn = db.get_connection()
@@ -165,6 +176,7 @@ elif choice == "📝 Tədbirə Qeydiyyat":
                         finally:
                             conn.close()
 
+# --- 4. İDARƏETMƏ PANELİ VƏ STATİSTİKA ---
 elif choice == "📊 İdarəetmə Paneli & Statistika":
     st.header("📊 Sistem Statistikası")
     conn = db.get_connection()
@@ -191,6 +203,7 @@ elif choice == "📊 İdarəetmə Paneli & Statistika":
     if not df_top.empty:
         st.dataframe(df_top, use_container_width=True)
 
+# --- 5. FƏRDİ ƏLAVƏ TAPŞIRIQ: FAYLA İXRAC ---
 elif choice == "📥 Əlavə: Fayla İxrac (CSV)":
     st.header("📥 İştirakçı Siyahısını İxrac Et")
     conn = db.get_connection()
