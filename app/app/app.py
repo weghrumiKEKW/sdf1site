@@ -1,17 +1,21 @@
 import sys
 import os
 
-# Qovluq yollarını dinamik olaraq tapıb sistemə əlavə edirik (ImportError xətasını önləmək üçün)
+# Qovluq yollarını dinamik olaraq əlavə edirik (ImportError xətasını qəti həll edir)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
+grandparent_dir = os.path.dirname(parent_dir)
+
 sys.path.append(current_dir)
 sys.path.append(parent_dir)
+sys.path.append(grandparent_dir)
+sys.path.append(os.path.join(current_dir, 'app'))
 
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# database modulu fərqli qovluqlarda olsa belə tapılması üçün try-except
+# Modulları təhlükəsiz şəkildə çağırırıq
 try:
     from database import DatabaseManager
 except ImportError:
